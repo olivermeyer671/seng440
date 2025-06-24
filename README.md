@@ -18,3 +18,5 @@
 - There is a shared folder in /root/project/ that is linked to the cloned repo (/seng440/project/)
 - Any files in your local machine will be mirrored to this location and can be compiled on the virtual machine, or cross-compiled from your machine
  
+## Mac Specific Info
+	- ...
