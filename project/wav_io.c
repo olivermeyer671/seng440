@@ -1,16 +1,21 @@
 #include <stdio.h>
 #include <stdint.h>
 
-int main(void) {
+int main(int argc, char *argv[]) {
 
-    FILE *input_file = fopen("apollo.wav", "rb");
-    if (!input_file) {
-        perror("input_file failed to open");
+    if (argc != 3) {
+        printf("Incorrect arguments, please use: %s input_file.wav output_file.wav\n", argv[0]);
         return(1);
     }
-    FILE *output_file = fopen("output.wav", "wb");
+
+    FILE *input_file = fopen(argv[1], "rb");
+    if (!input_file) {
+        perror("input_file failed to open\n");
+        return(1);
+    }
+    FILE *output_file = fopen(argv[2], "wb");
     if (!output_file){
-        perror("output_file failed to open");
+        perror("output_file failed to open\n");
         return(1);
     }
 
