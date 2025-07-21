@@ -50,9 +50,9 @@ int expand(int compressed_codeword) {
     // rebuild absolute valued sample from step bits, leading/trailing ones
     int magnitude;
     if (chord ==0) {
-        magnitude = (step << 1) | 1;
+        magnitude = (step << 1) | 0b00000001;
     } else {
-        magnitude = (1 << (chord + 4)) | (step << (chord + 3)) | (1 << chord - 1);
+        magnitude = (0b00010000 | step | 0b00000001 ) << (chord - 1);
     }
     // left-shift by 3 bits to get back to 16-bit sample
     magnitude <<= 3;
