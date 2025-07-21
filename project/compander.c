@@ -30,7 +30,7 @@ int compress(int sample) {
     int leading_zeros = __builtin_clz(magnitude | 1) - 16; //range [4,16]
     leading_zeros = (leading_zeros > 11) ? 11 : leading_zeros; //range[4,11] (7 possible chords)
     // determine chord
-    int chord = leading_zeros - 11;
+    int chord = 11 - leading_zeros;
     // extract step
     int step = (magnitude >> (chord + (chord == 0))) & 0x0F;
     // build compressed codeword from sign, chord, and step bits
