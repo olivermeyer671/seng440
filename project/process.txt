@@ -1,4 +1,3 @@
-/* 
 # ENCODER LOGIC (A-Law)
 
 ## PROCEDURE:
@@ -33,97 +32,37 @@
         - Highest set magnitude bit position (12 bits [11,0]): 0110 0000 0111 -> Bit 10 is first set: corresponds to 6 in binary (range [7,0]): bx110
         - Four subsequent bits after the highest set magnitude bit (bits [9,6]): 10 00
         - Compressed codeword (sign bit | chord | step bits): 1110 1000
-        - Invert even bits for transmission:                  1011 1101
-
-    
+        - Invert even bits for transmission:                  1011 1101    
 
 ## OUTPUT:
     - Returns an 8-Bit compressed codeword with inverted even bits (for transmission?)
     - At minimum will return an int8_t (signed 8-bit integer defined in c99)
 
-
 ## MASKING:
     - 
 
-*/
 
-int signum ( int sample ) {
-    if( sample < 0)
-        return(1) ; /* sign is ’1’ for negative samples */
-    else:
-        return(0) ; /* sign is ’0’ for positive samples */
-}
-int magnitude ( int sample ) {
-    if( sample < 0) {
-        sample = - sample ;
-    }
-    return( sample );
-}
 
-char codeword_compression ( unsigned int sample_magnitude , int sign ) {
 
-    int chord , step ;
-    int codeword_tmp ;
 
-    if( sample_magnitude & (1 << 12) ) {
-        chord = 0x7 ;
-        step = ( sample_magnitude >> 8) & 0xF ;
-        codeword_tmp = ( sign << 7) & ( chord << 4) & step ;
-        return ( (char) codeword_tmp );
-    }
+# DECODER LOGIC
 
-    if( sample_magnitude & (1 << 11) ) {
-        chord = 0x6 ;
-        step = ( sample_magnitude >> 7) & 0xF ;
-        codeword_tmp = ( sign << 7) & ( chord << 4) & step ;
-        return ( (char) codeword_tmp );
-    }
+## PROCEDURE:
+    1. Receive 8-bit compressed codeword with inverted even bits
+    2. Invert again the even bits of the compressed codeword
+    3. Extract Sign, Chord, and Step bits from the compressed codeword (sign bit: 1 = negative for A-law)
+    4. Use the 3 bits of the Chord number to determine position of the first set bit (no initial set bit in chord 0 for A-law)
+    5. Following the first set bit, the step bits are added to the decompressed codeword.
+    6. Now have 12 magnitude bits, along with a 13th bit that is always zero.
+    7. Left-shift by 3 bits to get the 16 bit decompressed codeword in absolute value.
+    8. If sign bit = 1 (is negative): Invert the bits and add 1.
+    9. This is the decompressed sample.
+    10. Return sample to wav file.
 
-    if( sample_magnitude & (1 << 10) ) {
-        chord = 0x5 ;
-        step = ( sample_magnitude >> 6) & 0xF ;
-        codeword_tmp = ( sign << 7) & ( chord << 4) & step ;
-        return ( (char) codeword_tmp );
-    }
+## INPUT:
+    - 8-Bit compressed codeword with even bits inverted
 
-    if( sample_magnitude & (1 << 9) ) {
-        chord = 0x4 ;
-        step = ( sample_magnitude >> 5) & 0xF ;
-        codeword_tmp = ( sign << 7) & ( chord << 4) & step ;
-        return ( (char) codeword_tmp );
-    }
-    if( sample_magnitude & (1 << 8) ) {
-        chord = 0x3 ;
-        step = ( sample_magnitude >> 4) & 0xF ;
-        codeword_tmp = ( sign << 7) & ( chord << 4) & step ;
-        return ( (char) codeword_tmp );
-    }
 
-    if( sample_magnitude & (1 << 7) ) {
-        chord = 0x2 ;
-        step = ( sample_magnitude >> 3) & 0xF ;
-        codeword_tmp = ( sign << 7) & ( chord << 4) & step ;
-        return ( (char) codeword_tmp );
-    }
-
-    if( sample_magnitude & (1 << 6) ) {
-        chord = 0x1 ;
-        step = ( sample_magnitude >> 2) & 0xF ;
-        codeword_tmp = ( sign << 7) & ( chord << 4) & step ;
-        return ( (char) codeword_tmp );
-    }
-
-    if( sample_magnitude & (1 << 5) ) {
-        chord = 0x0 ;
-        step = ( sample_magnitude >> 1) & 0xF ;
-        codeword_tmp = ( sign << 7) & ( chord << 4) & step ;
-        return ( (char) codeword_tmp );
-    }
-}
-
-int main() {
-    int sample = -12345; // sample example
-    int sign = signum(sample);
-    unsigned int magnitude = magnitude(sample);
-    int codeword = codeword_compression(magnitude, sign);
-}
+## OUTPUT:
+    - 16-bit decompressed sample 
+    - (With only 13 significant bits)
