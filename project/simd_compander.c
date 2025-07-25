@@ -59,7 +59,7 @@ Batch8Bit compress_batch(Batch16Bit input_batch) {
 
     // extract the sign bits to bit 7 of an 8-bit lane
     uint16x8_t signs = vshrq_n_u16(vreinterpretq_u16_s16(samples), 15);
-    uint8x8_t signs_8bit = vmovn_u16(vshl_n_u16(signs, 7)); //shift operations on 16-bit lanes is more efficient
+    uint8x8_t signs_8bit = vmovn_u16(vshlq_n_u16(signs, 7)); //shift operations on 16-bit lanes is more efficient
 
     // get 13-bit shifted absolutes
     uint16x8_t absolutes = vshrq_n_u16(vreinterpretq_u16_s16(vabsq_s16(samples)), 3);
@@ -67,7 +67,7 @@ Batch8Bit compress_batch(Batch16Bit input_batch) {
     // get chord segments
     uint16x8_t leading_zeros = vclzq_u16(absolutes);
     uint16x8_t chords = vqsubq_u16(vdupq_n_u16(11), leading_zeros); // range [0,7] (if clz=3,2,1, chord could be 8,9,10 -> should not happen since 13-bit positive integer)
-    uint8x8_t chords_8bit = vmovn_u16(vshl_n_u16(chords, 4));
+    uint8x8_t chords_8bit = vmovn_u16(vshlq_n_u16(chords, 4));
 
     // get step bits (must be done without NEON since variable shifts are not supported)
     uint16_t absolutes_array[8] = {0};
@@ -78,7 +78,7 @@ Batch8Bit compress_batch(Batch16Bit input_batch) {
     for (uint8_t i = 0; i < input_batch.count; i++) {
         steps_array[i] = ((absolutes_array[i] >> (chords_array[i] + (chords_array[i] == 0))) & 0x0F);
     }
-    uint8x8_t steps_8bit = vmovn_u16(vld1_u16(steps_array));
+    uint8x8_t steps_8bit = vmovn_u16(vld1q_u16(steps_array));
 
     // assemble 8-bit compressed codewords
     uint8x8_t codewords = vorr_u8(signs_8bit, vorr_u8(chords_8bit, steps_8bit));
@@ -128,7 +128,7 @@ Batch16Bit expand_batch(Batch8Bit input_batch) {
 
     // create output struct (for edge case where final input is less than 8 samples and a count is required)
     Batch16Bit output;
-    vst1_s16(output.data, output_samples);
+    vst1q_s16(output.data, output_samples);
     output.count = input_batch.count;
 
     // return the output
