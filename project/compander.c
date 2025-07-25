@@ -122,7 +122,9 @@ int main(int argc, char *argv[]) {
 
     fclose(input_file);
     fclose(output_file);
-    
+       
+    // TEST BENCHMARK CODE
+    /*
 
     int16_t inputs[8] = {
         0b0000000000011110,
@@ -143,8 +145,6 @@ int main(int argc, char *argv[]) {
     }
 
     
-// TEST BENCHMARK CODE
-/*
 void print_binary16(uint16_t val) {
     for (int i = 15; i >= 0; i--) {
         printf("%d", (val >> i) & 1);
