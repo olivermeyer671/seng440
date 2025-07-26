@@ -69,16 +69,15 @@ Batch8Bit compress_batch(Batch16Bit input_batch) {
     uint16x8_t chords = vqsubq_u16(vdupq_n_u16(11), leading_zeros); // range [0,7] (if clz=3,2,1, chord could be 8,9,10 -> should not happen since 13-bit positive integer)
     uint8x8_t chords_8bit = vmovn_u16(vshlq_n_u16(chords, 4));
 
-    // get step bits (must be done without NEON since variable shifts are not supported)
-    uint16_t absolutes_array[8] = {0};
-    vst1q_u16(absolutes_array, absolutes);
-    uint16_t chords_array[8] = {0};
-    vst1q_u16(chords_array, chords);
-    uint16_t steps_array[8] = {0};
-    for (uint8_t i = 0; i < input_batch.count; i++) {
-        steps_array[i] = ((absolutes_array[i] >> (chords_array[i] + (chords_array[i] == 0))) & 0x0F);
-    }
-    uint8x8_t steps_8bit = vmovn_u16(vld1q_u16(steps_array));
+    // get step bits (variable shifts only supported on left-shift, must left-shift by a negative)
+    // get shift magnitude (right-shift = chord + (chord==0))
+    uint16x8_t shifts = vaddq_u16(chords, vandq_u16(vceqq_u16(chords, vdupq_n_u16(0)), vdupq_n_u16(1))); 
+    // variable shift left by a negative to shift right
+    int16x8_t negative_shifts = vnegq_s16(vreinterpretq_s16_u16(shifts));
+    // shift and mask to get lower 4 bits
+    uint16x8_t shifted_steps = vandq_u16(vshlq_u16(absolutes, negative_shifts), vdupq_n_u16(0x0F));
+    // step bits in 8-bit format
+    uint8x8_t steps_8bit = vmovn_u16(shifted_steps);
 
     // assemble 8-bit compressed codewords
     uint8x8_t codewords = vorr_u8(signs_8bit, vorr_u8(chords_8bit, steps_8bit));
@@ -106,29 +105,41 @@ Batch16Bit expand_batch(Batch8Bit input_batch) {
     uint8x8_t codewords = veor_u8(vld1_u8(codeword_array), vdup_n_u8(0x55));
 
     // extract sign, chord, and step bits for all lanes
-    uint8x8_t signs = vshr_n_u8(codewords, 7); // unsigned right-shift of all bits, will be zero-padded so does not need masking
-    uint8x8_t chords = vand_u8(vshr_n_u8(codewords, 4), vdup_n_u8(0x07));
-    uint8x8_t steps = vand_u8(codewords, vdup_n_u8(0x0F));
+    uint16x8_t signs = vmovl_u8(vshr_n_u8(codewords, 7)); // unsigned right-shift of all bits, will be zero-padded so does not need masking
+    uint16x8_t chords = vmovl_u8(vand_u8(vshr_n_u8(codewords, 4), vdup_n_u8(0x07)));
+    uint16x8_t steps = vmovl_u8(vand_u8(codewords, vdup_n_u8(0x0F)));
 
-    // assemble 16-bit decompressed output samples (must be done without NEON since variable shifts are not supported)
-    uint8_t signs_array[8] = {0};
-    vst1_u8(signs_array, signs);
-    uint8_t chords_array[8] = {0};
-    vst1_u8(chords_array, chords);
-    uint8_t steps_array[8] = {0};
-    vst1_u8(steps_array, steps);
-    int16_t output_array[8] = {0};
-    for (uint8_t i = 0; i < input_batch.count; i++) {
-        uint16_t decompressed_absolute = (chords_array[i] == 0) ? ((steps_array[i] << 1) | 1) : (0x10 | steps_array[i]) << (chords_array[i] - 1);
-        decompressed_absolute <<= 3;
-        int16_t decompressed_sample = signs_array[i] ? -(int16_t)decompressed_absolute : (int16_t)decompressed_absolute;
-        output_array[i] = decompressed_sample;
-    }
-    int16x8_t output_samples = vld1q_s16(output_array);
 
+    //reassemble the 16-bit signed sample
+    // formula: absolute = (chord == 0) ? (step << 1) | 1 : ((0x10 | step) << (chord)) | (1 << (chord - 1)) 
+    // get steps with trailing bit (step = (step << 1) | 1)
+    steps = vorrq_u16(vshlq_n_u16(steps, 1), vdupq_n_u16(1));
+    
+    // get (chord - 1)
+    uint16x8_t chords_minus_one = vqsubq_u16(chords, vdupq_n_u16(1));
+
+    // get 0x20 | steps
+    uint16x8_t steps_with_leading_bit = vorrq_u16(steps, vdupq_n_u16(0x20));
+
+    //get shifted steps for chords 1-7
+    uint16x8_t shifted_steps = vshlq_u16(steps_with_leading_bit, vreinterpretq_s16_u16(chords_minus_one));
+
+    // get absolute = (chord==0) ? steps : shifted_steps
+    uint16x8_t is_zero = vceqq_u16(chords, vdupq_n_u16(0));
+    uint16x8_t absolutes = vbslq_u16(is_zero, steps, shifted_steps);
+
+    // left shift by 3 to get 16-bit form
+    absolutes = vshlq_n_u16(absolutes, 3);
+
+    //get true signed sample values
+    int16x8_t signed_samples = vreinterpretq_s16_u16(absolutes);
+    uint16x8_t sign_masks = vceqq_u16(signs, vdupq_n_u16(1));
+    signed_samples = vbslq_s16(sign_masks, vnegq_s16(signed_samples), signed_samples);
+
+    
     // create output struct (for edge case where final input is less than 8 samples and a count is required)
     Batch16Bit output;
-    vst1q_s16(output.data, output_samples);
+    vst1q_s16(output.data, signed_samples);
     output.count = input_batch.count;
 
     // return the output
