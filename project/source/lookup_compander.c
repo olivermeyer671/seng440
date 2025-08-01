@@ -60,48 +60,7 @@ int lookup_compander_regular(const char *filename) {
     return 0;
 }
 
-int lookup_compander_pipelined(const char *filename) {
-    FILE *in = fopen(filename, "rb");
-    if (!in) {
-        perror("input file failed to open");
-        return 1;
-    }
-    FILE *out = fopen("outputs/lookup_pipelined.wav", "wb");
-    if (!out) {
-        perror("output file failed to open");
-        fclose(in);
-        return 1;
-    }
-    uint8_t header[44];
-    fread(header, 1, 44, in);
-    fwrite(header, 1, 44, out);
 
-    int16_t curr_sample, next_sample;
-    uint8_t curr_codeword, next_codeword;
-    int16_t curr_expanded;
-
-    // Pipeline: read first sample
-    if (fread(&curr_sample, sizeof(int16_t), 1, in) != 1) {
-        fclose(in);
-        fclose(out);
-        return 0; // No data; just header
-    }
-    curr_codeword = compress_lookup(curr_sample);
-    curr_expanded = expand_lookup(curr_codeword);
-
-    while (fread(&next_sample, sizeof(int16_t), 1, in) == 1) {
-        next_codeword = compress_lookup(next_sample);
-        fwrite(&curr_expanded, sizeof(int16_t), 1, out);
-
-        curr_codeword = next_codeword;
-        curr_expanded = expand_lookup(curr_codeword);
-    }
-    fwrite(&curr_expanded, sizeof(int16_t), 1, out);
-
-    fclose(in);
-    fclose(out);
-    return 0;
-}
 
 // Internal helper: load the expand lookup table from CSV.
 static void load_expand_lookup(const char *filename) {
