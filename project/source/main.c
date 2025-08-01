@@ -5,6 +5,7 @@
 
 #include "scalar_compander.h"
 #include "simd_compander.h"
+#include "lookup_compander.h"
 
 
 int scalar_regular(char *filename) {
