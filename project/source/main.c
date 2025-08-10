@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "scalar_compander.h"
 #include "simd_compander.h"
@@ -219,19 +220,94 @@ int main(int argc, char *argv[]) {
         return(1);
     }
 
-    //B
-    // Load lookup tables once at startup (must be done before processing)
     load_lookup_tables();
 
-    // Run regular and pipelined companders using the lookup tables
-    lookup_compander_regular(argv[1]);
-    lookup_compander_pipelined(argv[1]);
-    // B
+    int iterations = 5;
+    clock_t start;
+    clock_t end;
+    clock_t total_start;
+    clock_t total_end;
+    double elapsed;
+    char *format = "%-35s : %10.0f ms\n";
 
-    scalar_regular(argv[1]);
-    scalar_pipelined(argv[1]);
-    simd_regular(argv[1]);
-    simd_pipelined(argv[1]);
+    FILE *stats = fopen("statistics.txt", "w");
+    if (!stats) {
+        perror("error opening statistics.txt");
+        return 1;
+    }
+
+    fprintf(stats, "A-Law Audio Compression and Expansion Test Results (average execution time for %d iterations)\n\n", iterations);
+    printf("\nA-Law Audio Compression and Expansion Test Results (average execution time for %d iterations)\n\n", iterations);
+
+
+    total_start = clock();
+    start = clock();
+    for (int i = 0; i < iterations; i++) {
+        lookup_compander_regular(argv[1]);
+    }
+    end = clock();
+    elapsed = (double)(end-start) / CLOCKS_PER_SEC * 1000;
+    fprintf(stats, format, "Lookup Table Compander Regular", (elapsed / iterations));
+    printf(format, "Lookup Table Compander Regular", (elapsed / iterations));
+
+    start = clock();
+    for (int i = 0; i < iterations; i++) {
+        lookup_compander_pipelined(argv[1]);  
+    }
+    end = clock();
+    elapsed = (double)(end-start) / CLOCKS_PER_SEC * 1000;
+    fprintf(stats, format, "Lookup Table Compander Pipelined", (elapsed / iterations));
+    printf(format, "Lookup Table Compander Pipelined", (elapsed / iterations));
+
+
+    start = clock();
+    for (int i = 0; i < iterations; i++) {
+        scalar_regular(argv[1]);
+    }
+    end = clock();
+    elapsed = (double)(end-start) / CLOCKS_PER_SEC * 1000;
+    fprintf(stats, format, "Scalar Compander Regular", (elapsed / iterations));
+    printf(format, "Scalar Compander Regular", (elapsed / iterations));
+
+
+    start = clock();
+    for (int i = 0; i < iterations; i++) {
+        scalar_pipelined(argv[1]);
+    }
+    end = clock();
+    elapsed = (double)(end-start) / CLOCKS_PER_SEC * 1000;
+    fprintf(stats, format, "Scalar Compander Pipelined", (elapsed / iterations));
+    printf(format, "Scalar Compander Pipelined", (elapsed / iterations));
+
+
+    start = clock();
+    for (int i = 0; i < iterations; i++) {
+        simd_regular(argv[1]);
+    }
+    end = clock();
+    elapsed = (double)(end-start) / CLOCKS_PER_SEC * 1000;
+    fprintf(stats, format, "SIMD Compander Regular", (elapsed / iterations));
+    printf(format, "SIMD Compander Regular", (elapsed / iterations));
+
+
+    start = clock();
+    for (int i = 0; i < iterations; i++) {
+        simd_pipelined(argv[1]);
+    }
+    end = clock();
+    elapsed = (double)(end-start) / CLOCKS_PER_SEC * 1000;
+    fprintf(stats, format, "SIMD Compander Pipelined", (elapsed / iterations));
+    printf(format, "SIMD Compander Pipelined", (elapsed / iterations));
+
+
+    total_end = clock();
+    elapsed = (double)(total_end-total_start) / CLOCKS_PER_SEC;
+    fprintf(stats, "%-35s : %10.0f s\n", "Total Test-Bench Execution Time", (elapsed));    
+    printf("%-35s : %10.0f s\n\n", "Total Test-Bench Execution Time", (elapsed));    
+
+
+    fclose(stats);
+
 
     return 0;
 }

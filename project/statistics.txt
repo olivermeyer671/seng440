@@ -1,0 +1,9 @@
+A-Law Audio Compression and Expansion Test Results (average execution time for 5 iterations)
+
+Lookup Table Compander Regular      :       3328 ms
+Lookup Table Compander Pipelined    :       3228 ms
+Scalar Compander Regular            :       3696 ms
+Scalar Compander Pipelined          :       3637 ms
+SIMD Compander Regular              :        939 ms
+SIMD Compander Pipelined            :       1183 ms
+Total Test-Bench Execution Time     :         80 s
