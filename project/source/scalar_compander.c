@@ -19,10 +19,9 @@
 
 
 uint8_t compress_scalar(int16_t sample) {
-    //if (sample == 0) return 0xD5;
     uint16_t mask = sample >> 15;       // 0x0000 if positive, 0xFFFF if negative
-    uint16_t magnitude = (sample ^ mask) - mask + (sample == -32768);   // 0??? ???? ???? ????
-    magnitude >>= 3;                                                    // 0000 ???? ???? ???X
+    uint16_t magnitude = (sample ^ mask) - mask + (sample == -32768);   // Positive 16-bit integer
+    magnitude >>= 3;                                                    // Positive 13-bit integer
     uint16_t leading_zeros = __builtin_clz(magnitude | 1) - 16;         //                      (lz range [0,16])
     leading_zeros = (leading_zeros > 11) ? 11 : leading_zeros;                         // 0000 0000 000        (lz range [4,11])
     uint8_t chord = 11 - leading_zeros;                                 // 0000 7654 321A BCDX  (msb chord locations range [0,7])
@@ -35,7 +34,6 @@ uint8_t compress_scalar(int16_t sample) {
 
 
 int16_t expand_scalar(uint8_t compressed_codeword) {
-    //if (compressed_codeword == 0xD5) return 0;
     compressed_codeword ^= 0x55;
     uint8_t sign = (compressed_codeword >> 7) & 0x01;
     uint8_t chord = (compressed_codeword >> 4) & 0x07;
