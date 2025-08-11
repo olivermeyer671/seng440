@@ -222,7 +222,7 @@ int main(int argc, char *argv[]) {
 
     load_lookup_tables();
 
-    int iterations = 5;
+    int iterations = 2;
     clock_t start;
     clock_t end;
     clock_t total_start;
