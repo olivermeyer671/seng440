@@ -1,6 +1,6 @@
 # compiler and flags
 CC = gcc
-CFLAGS = -Iinclude -mfpu=neon -march=armv7-a -O3
+CFLAGS = -Iinclude -mfpu=neon -mcpu=cortex-a15 -O3
 
 # source files
 SRCS = source/main.c source/scalar_compander.c source/simd_compander.c source/lookup_compander.c
@@ -37,6 +37,13 @@ clean:
 
 # run with default input
 run: $(TARGET)
-	$(TARGET) inputs/karma.wav
+	$(TARGET) /inputs/karma.wav
+
+# show assembly for each compander
+build/%.s: source/%.c
+	$(CC) $(CFLAGS) -S $< -o $@
+
+assembly: build/main.s build/scalar_compander.s build/simd_compander.s build/lookup_compander.s
+
 
 
