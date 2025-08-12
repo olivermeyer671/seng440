@@ -37,7 +37,7 @@ clean:
 
 # run with default input
 run: $(TARGET)
-	$(TARGET) /inputs/karma.wav
+	$(TARGET) inputs/Baqar-tester.wav
 
 # show assembly for each compander
 build/%.s: source/%.c

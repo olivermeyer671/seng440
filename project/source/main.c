@@ -165,6 +165,35 @@ int simd_pipelined(char *filename) {
 }
 
 // Baqar addition
+
+int lookup_compander_regular(const char *filename) {
+    FILE *in = fopen(filename, "rb");
+    if (!in) {
+        perror("input file failed to open");
+        return 1;
+    }
+    FILE *out = fopen("outputs/lookup_regular.wav", "wb");
+    if (!out) {
+        perror("output file failed to open");
+        fclose(in);
+        return 1;
+    }
+    uint8_t header[44];
+    fread(header, 1, 44, in);
+    fwrite(header, 1, 44, out);
+
+    int16_t sample;
+    while (fread(&sample, sizeof(int16_t), 1, in) == 1) {
+        uint8_t codeword = compress_lookup(sample);
+        int16_t expanded = expand_lookup(codeword);
+        fwrite(&expanded, sizeof(int16_t), 1, out);
+    }
+
+    fclose(in);
+    fclose(out);
+    return 0;
+}
+
 // Pipelined: always have one "in flight" sample; overlap steps for speed.
 int lookup_compander_pipelined(const char *filename) {
     FILE *in = fopen(filename, "rb");
@@ -222,7 +251,7 @@ int main(int argc, char *argv[]) {
 
     load_lookup_tables();
 
-    int iterations = 2;
+    int iterations = 5;
     clock_t start;
     clock_t end;
     clock_t total_start;
@@ -236,8 +265,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    fprintf(stats, "A-Law Audio Compression and Expansion Test Results (average execution time for %d iterations)\n\n", iterations);
-    printf("\nA-Law Audio Compression and Expansion Test Results (average execution time for %d iterations)\n\n", iterations);
+    fprintf(stats, "A-Law Audio Compression and Expansion Test Results (average execution time)\n\n");// for %d iterations)\n\n", iterations);
+    printf("\nA-Law Audio Compression and Expansion Test Results (average execution time)\n\n");// for %d iterations)\n\n", iterations);
 
 
     total_start = clock();
