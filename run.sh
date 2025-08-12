@@ -17,7 +17,7 @@ qemu-system-arm \
   -drive if=none,file="$DISK",id=hd0,format=qcow2 \
   -device virtio-blk-device,drive=hd0 \
   -append "console=ttyAMA0 root=/dev/vda3 rw loglevel=3" \
-  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+  -netdev user,id=net0,hostfwd=tcp::2222-:22,dns=1.1.1.1 \
   -device virtio-net-device,netdev=net0 \
   -fsdev local,id=fsdev0,path=$ROOT_DIR/project,security_model=none \
   -device virtio-9p-device,fsdev=fsdev0,mount_tag=shared_project \
